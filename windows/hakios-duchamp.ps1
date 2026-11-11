@@ -154,7 +154,8 @@ $lines = New-Object System.Collections.Generic.List[string]
 $fdtPath = Join-Path $Probe 'fdt.dtb'
 try {
 	$b = [IO.File]::ReadAllBytes($fdtPath)
-	if ((BE32 $b 0) -ne [uint32]3490578157)   # 0xd00dfeed (a hex literal would be a negative Int32 in PowerShell 5.1) { throw 'fdt.dtb no es un device tree' }
+	# 3490578157 = 0xd00dfeed (a hex literal would be a negative Int32 in PowerShell 5.1)
+	if ((BE32 $b 0) -ne [uint32]3490578157) { throw 'fdt.dtb no es un device tree' }
 	$offStruct = [int](BE32 $b 8); $offStr = [int](BE32 $b 12); $sizeStruct = [int](BE32 $b 36)
 	$at = $offStruct; $end = $offStruct + $sizeStruct
 	$path = New-Object System.Collections.Generic.List[string]
