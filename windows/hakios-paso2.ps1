@@ -44,8 +44,20 @@ function Wait-Fastboot {
 	$s = Adb-Serial
 	if ($s) { Say 'reiniciando en fastboot...'; & $Adb -s $s reboot bootloader | Out-Null }
 	else { Warn 'No veo el teléfono en Android: ponlo en fastboot a mano (power + volumen abajo).' }
-	for ($i = 0; $i -lt 120; $i++) { $f = Fastboot-Serial; if ($f) { return $f }; Start-Sleep 1 }
-	Fail 'El teléfono no aparece en fastboot (¿driver de fastboot instalado en Windows?).'
+	Say "esperando a que Windows vea el teléfono en fastboot ($Fastboot devices)..."
+	for ($i = 0; $i -lt 90; $i++) {
+		$f = Fastboot-Serial
+		if ($f) { Say "en fastboot: listo"; return $f }
+		if ($i -eq 20) {
+			Warn 'Windows todavía no ve el teléfono en fastboot. Lo normal es que falte el driver de fastboot:'
+			Warn '  Administrador de dispositivos -> si aparece "Android" con un triángulo amarillo, instala el'
+			Warn '  "Google USB Driver" (o el driver de Xiaomi) y elige "Android Bootloader Interface".'
+		}
+		if ($i % 5 -eq 0) { Write-Host "  ...$i s  (fastboot devices: '$((& $Fastboot devices 2>&1 | Out-String).Trim())')" }
+		Start-Sleep 1
+	}
+	Fail ('El teléfono no aparece en fastboot. NO se ha flasheado nada: el teléfono está intacto. Instala el driver, ' +
+	    'comprueba con "C:\platform-tools\fastboot devices" y vuelve a probar; para salir de fastboot mantén power ~10 s.')
 }
 function Check-Image($path, $what) {
 	if (-not (Test-Path $path)) { Fail "Falta $what ($path)." }
