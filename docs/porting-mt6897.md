@@ -99,3 +99,24 @@ this phone patches `init_boot`, not `boot`, so a rooted phone's `boot_a` is the 
 Flash only `boot_a`; never slot b, never any other partition. Always pass the serial. Keep the backup. Short runs, one at a
 time, no voltage changes. If the phone does not come back, hold power and volume down for fastboot and flash
 `backup/boot_a.img`.
+
+## Checked against another MT6897 port (Lenovo TB375FC)
+
+[billyham07/UniXNU-tb375fc](https://github.com/billyham07/UniXNU-tb375fc) (read on 11 November, commit `cc4da0e`) runs XNU on
+the same SoC, by another route: a UEFI port (Mu-Silicium) and the UniXNU framework with iPadOS 27 (xnu-12377), after an
+earlier HakiOS 16.5 route with a stage0 loader in front of LK. Its numbers come from that tablet's live FDT and from runs on
+it, so they are a second witness for this page.
+
+| | TB375FC | here | |
+| --- | --- | --- | --- |
+| Cores, MPIDR | A510 `0x000`-`0x300`, A715 `0x400`-`0x700`, all eight up through PSCI (SMC) | same | agrees |
+| GIC | GICD `0x0c400000`/`0x40000`, GICR `0x0c440000`/`0x200000` | same | agrees |
+| Timer | 13 MHz, PPIs 13/14/11/10 | read from `CNTFRQ_EL0` at run time | agrees |
+| Watchdog | TOPRGU `0x1c00a000`, RESTART key `0x1971` | same | agrees |
+| UFS | UFSHCI `0x112b0000`; LK leaves the link at PWM-G1 and single 4 KiB READ(10)s work without touching it; data on LUN 2 | `0x112b0000`, UFS step not written yet | agrees, and the plan of step 5 is what worked there |
+| XNU memory | `0x130000000`-`0x23bc00000`, the first System RAM run with no reserved holes | was `0xc0000000` + `0xfe000000` (the MT6768's) | **corrected**: now `0x130000000` + 4 GiB |
+| Watchdog mode | stage0 arms TOPRGU keeping LK's mode bits; the kernel only ever writes RESTART | wrote the key alone (clears every mode bit) | **corrected**: only the enable bit changes |
+
+Also worth knowing from there, though it was seen on xnu-12377 and may not apply to 16.5: `use_contiguous_hint=0` was needed
+(an `arm_vm_init.c` hint assertion in `machine_lockdown`), and with no RTC driver the kernel waits 30 s for IORTC, so a run
+must not let the watchdog fire during it.

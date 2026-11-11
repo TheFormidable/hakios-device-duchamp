@@ -25,6 +25,8 @@
 #define PLAT_UART_BASE          0x11001000ULL
 
 /* ---- the watchdog: TOPRGU, watchdog@1c00a000, "mediatek,mt6897-wdt", "mediatek,mt6589-wdt" [dtb] ----
+ * (the same address the TB375FC port, another MT6897, pets: package/Tb375fcDiagGlue.c). Its MODE register is changed one bit
+ * at a time -- enable only -- and LK's other mode bits are kept, as that port's stage0 does (mtkdbg.h). ----
  * mt6589-wdt compatible: the same MODE/LENGTH/RESTART/SWRST registers and keys as the MT6768's at 0x10007000. */
 #define PLAT_TOPRGU_BASE        0x1c00a000ULL
 
@@ -77,9 +79,12 @@
  * /memory in the shipped tree is LK's placeholder (0x40000000 + 1 GB); the phone has 8 or 12 GB from 0x40000000.
  * Most of the MT6897's reserved memory is placed by LK at boot (alloc-ranges up to 0x1_3000_0000), so the range below must
  * be checked against /proc/iomem and /sys/firmware/fdt's reserved-memory on the phone (tools/duchamp-probe.sh) before the
- * first run: XNU must get a range that nothing else uses. The MT6768's was 0xc0000000 + 0xfe000000. */
-#define PLAT_XNU_PHYS_BASE      0xc0000000ULL
-#define PLAT_XNU_MEM_SIZE       0xfe000000ULL
+ * first run: XNU must get a range that nothing else uses.
+ * The MT6768's 0xc0000000 does not carry over: on another MT6897 (Lenovo TB375FC, github.com/billyham07/UniXNU-tb375fc,
+ * dts/tb375fc.dts) the first System RAM run without reserved holes starts at 0x130000000 -- exactly where those alloc-ranges
+ * end -- and an XNU of the 16.5 route ran there in a 4 GiB window. Same here, 4 GiB (to 0x230000000, under the top of 8 GB). */
+#define PLAT_XNU_PHYS_BASE      0x130000000ULL
+#define PLAT_XNU_MEM_SIZE       0x100000000ULL
 
 /* Where LK starts the boot image's kernel (this program) [phone]. The MT6768's LK used 0x40080000 (base 0x40000000 + the
  * Image header's text_offset 0x80000). duchamp's BoardConfig has kernel base 0x3fff8000 with the default kernel offset
@@ -91,7 +96,8 @@
  * downwards over this program, which is safe (chain_stub runs from PLAT_CHAIN_STUB_PA). */
 #define PLAT_ANDROID_PA         0x40000000ULL
 #define PLAT_CHAIN_STUB_PA      0x4a000000ULL   /* [ref] free DRAM for the copy stub, clear of the 50 MB Android Image */
-/* run state kept across the watchdog reset, and XNU's panic log [ref]: must be inside memory nothing else writes */
+/* run state kept across the watchdog reset, and XNU's panic log [ref]: must be inside memory nothing else writes. Below
+ * 0x130000000 LK places reserved memory at boot (see DRAM above): check these two against the probe before the first run. */
 #define PLAT_MARKER_PA          0x80000000ULL
 #define PLAT_PANIC_LOG_BASE     0x80100000ULL
 

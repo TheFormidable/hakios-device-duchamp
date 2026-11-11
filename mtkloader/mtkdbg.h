@@ -93,10 +93,26 @@ static inline void dbg_delay_ms(uint32_t ms)
 
 /* ---- watchdog ---- */
 
+/*
+ * MODE's low bits are LK's (enable, external reset, IRQ instead of reset, dual mode, DDR reserve...); the MT6768 loader wrote
+ * the key alone, which clears all of them. On the MT6897 only the enable bit (0) is changed and the rest kept as LK left them,
+ * as the TB375FC port's stage0 arms it "with LK's mode bits": a mode LK did not set could cost the DRAM (and pstore) its
+ * contents across the reset.
+ */
+#define TOPRGU_MODE_EN       0x1u
+#define TOPRGU_MODE_KEEP     0x00ffffffu
+
+static inline void wdt_mode_set(uint32_t enable)
+{
+	uint32_t mode = rd32(TOPRGU_MODE) & TOPRGU_MODE_KEEP & ~TOPRGU_MODE_EN;
+
+	wr32(TOPRGU_MODE, TOPRGU_MODE_KEY | mode | (enable ? TOPRGU_MODE_EN : 0));
+}
+
 static inline void wdt_disable(void)
 {
 	wr32(TOPRGU_RESTART, TOPRGU_RESTART_KEY);
-	wr32(TOPRGU_MODE, TOPRGU_MODE_KEY);
+	wdt_mode_set(0);
 }
 
 /* A warm reset, as Linux's mtk_wdt_restart does it: DRAM (and so pstore) survives. */

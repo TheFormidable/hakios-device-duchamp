@@ -2043,7 +2043,7 @@ static void __attribute__((noreturn)) run_xnu(void)
 		marker_set(MARK_RUNNING);
 		wr32(TOPRGU_LENGTH, ((t * 32768u / 512u) << 5) | 0x8u);
 		wr32(TOPRGU_RESTART, TOPRGU_RESTART_KEY);
-		wr32(TOPRGU_MODE, TOPRGU_MODE_KEY | 0x1u);
+		wdt_mode_set(1);         /* LK's other mode bits kept (mtkdbg.h) */
 		out("watchdog: back to Android in ");
 		out_dec(t);
 		out(" s\n");
