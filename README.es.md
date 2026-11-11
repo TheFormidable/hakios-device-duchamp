@@ -23,6 +23,11 @@ trabajo.
 - boot.img **cabecera v4** con `Image.lz4` y sin direcciones: el loader se recoloca solo y reinicia Android en un límite de 2 MB.
 - El framebuffer y ramoops de LK se leen del device tree de LK en cada arranque, en vez de estar fijos.
 
+## En Windows
+
+Doble clic en `windows\hakios-duchamp.cmd` (con el teléfono conectado, depuración USB y Magisk). Hace la copia de seguridad
+(`backup\`) y el sondeo (`logs\probe\`), sin bash ni Python, y deja `hakios-probe.zip` para enviarlo. Solo lee el teléfono.
+
 ## Uso (cuando estén comprobados los valores [phone] de platform.h)
 
 ```sh

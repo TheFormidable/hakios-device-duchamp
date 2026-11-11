@@ -30,3 +30,6 @@ xnu-flashed-slot_a.img
 *.dylib
 __pycache__/
 .DS_Store
+platform-tools/
+hakios-probe.zip
+backup-anterior-*/
