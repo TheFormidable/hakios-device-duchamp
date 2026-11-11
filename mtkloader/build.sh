@@ -25,8 +25,10 @@ CFLAGS="--target=aarch64-linux-gnu -ffreestanding -nostdlib -fno-builtin -mgener
 if [ ! -f "$HERE/font8x16.h" ]; then
 	if [ "${FONT:-}" = blank ]; then
 		echo 'static const unsigned char font8x16[95][16] = { { 0 } };' > "$HERE/font8x16.h"
-	else
+	elif command -v swift >/dev/null; then
 		swift "$REPO/tools/mkfont8x16.swift" > "$HERE/font8x16.h"
+	else
+		python3 "$REPO/tools/mkfont8x16.py" > "$HERE/font8x16.h"     # no Mac: a font of this machine, through Pillow
 	fi
 fi
 

@@ -120,3 +120,21 @@ it, so they are a second witness for this page.
 Also worth knowing from there, though it was seen on xnu-12377 and may not apply to 16.5: `use_contiguous_hint=0` was needed
 (an `arm_vm_init.c` hint assertion in `machine_lockdown`), and with no RTC driver the kernel waits 30 s for IORTC, so a run
 must not let the watchdog fire during it.
+
+## What the phone said (probe of 11 November)
+
+Isaac's duchamp: 2311DRK48G, HyperOS OS3.0.6.0.WNLMIXM (Android 16), slot a, orange state (unlocked), Magisk.
+
+- **DRAM** 8 GB, `0x40000000` + `0x200000000`. LK's reserved memory fills everything below `0x130000000` (the TEE alone is
+  `0xc0000000` + `0xe000000`, where the MT6768 loader put XNU; `0x80000000`, the MT6768's run marker, is `mm_ccu_reserved`).
+  System RAM `0x12fe70000`-`0x23dffffff` is free in one run: XNU `0x130000000` + `0xffe00000`, the marker and panic log in the
+  2 MB above it. The watcher's identity map now reaches the top of DRAM (it stopped at 8 GiB of address before).
+- **Android's Image** at `0x40000000` (Kernel code `0x40010000`), LK's tree at `0x47c80000`, its ramdisk at `0x66f00000`:
+  the BoardConfig's offsets hold.
+- **ramoops**: no `ramoops` node; LK passes `ramoops.mem_address=0x48090000 mem_size=0xe0000 console_size=0x40000
+  pmsg_size=0x10000` in `bootargs` (record and ftrace 4096, Linux's defaults). `mtkfdt.h` now reads them there: console
+  `0x4811f000`, pmsg `0x48160000` -- checked by running it on this phone's own tree. `/dev/pmsg0` exists.
+- **Framebuffer**: `atag,videolfb` base `0xfcc2f000` size `0x33d0000`, 60 fps, panel `n11a_42_02_0a_dsc_vdo` (1220 x 2712).
+- **CPU**: parts `0xd46` (A510) x4 at 2.2 GHz, `0xd4d` (A715) x4, cpu7 at 3.35 GHz: the core order holds.
+- **Touch**: Goodix (`GTP` in dmesg) through `xiaomi_touch`.
+- `boot_a` 64 MB, `init_boot_a` 8 MB.

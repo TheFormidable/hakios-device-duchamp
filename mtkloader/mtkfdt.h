@@ -11,8 +11,11 @@
  *   compatible = "ramoops"      reg (the parent's cells), record-size, console-size, ftrace-size, pmsg-size: the zones are laid
  *                               out as Linux's ramoops_probe() does it -- dump records from the start, then console, ftrace,
  *                               pmsg, each at the end of what is left
+ *   /chosen/bootargs            ... or, as duchamp's LK does it (seen on the phone, 11 November): no ramoops node -- only
+ *                               "mediatek,pstore" in reserved-memory -- and ramoops.mem_address=, mem_size=, console_size=,
+ *                               pmsg_size= on the command line; record_size and ftrace_size then keep Linux's default, 4096
  *
- * Read only; uses the walker helpers of mtkconnsys.h (dt_be32, dt_streq, dt_contains, dt_len).
+ * Read only; uses the walker helpers of mtkconnsys.h (dt_be32, dt_streq, dt_contains, dt_len) and memcmp_n.
  */
 #ifndef MTKFDT_H
 #define MTKFDT_H
@@ -46,6 +49,35 @@ static uint32_t fdt_le32(const uint8_t *p)
 	return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
+/* the number after `key` in a command line ("ramoops.mem_address=0x48090000"), 0x or decimal; 0 if absent */
+static uint64_t bootarg_num(const char *line, uint32_t len, const char *key)
+{
+	uint32_t kl = dt_len(key);
+
+	for (uint32_t i = 0; i + kl < len; i++) {
+		if ((i == 0 || line[i - 1] == ' ') && !memcmp_n(line + i, key, kl)) {
+			const char *p = line + i + kl;
+			uint64_t v = 0;
+			int base = 10;
+
+			if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
+				base = 16;
+				p += 2;
+			}
+			for (; p < line + len; p++) {
+				int d = *p >= '0' && *p <= '9' ? *p - '0' : *p >= 'a' && *p <= 'f' ? *p - 'a' + 10 :
+				    *p >= 'A' && *p <= 'F' ? *p - 'A' + 10 : 99;
+				if (d >= base) {
+					break;
+				}
+				v = v * (uint64_t)base + (uint64_t)d;
+			}
+			return v;
+		}
+	}
+	return 0;
+}
+
 static void lk_facts_read(uint64_t dtb, struct lk_facts *f)
 {
 	const uint8_t *fdt = (const uint8_t *)(uintptr_t)dtb;
@@ -59,6 +91,8 @@ static void lk_facts_read(uint64_t dtb, struct lk_facts *f)
 		int ramoops;
 	} lv[24];
 	int depth = -1;
+	const char *bootargs = NULL;
+	uint32_t bootargs_len = 0;
 
 	memset(f, 0, sizeof(*f));
 	if (dtb == 0 || dt_be32(fdt) != FDT_MAGIC) {
@@ -108,6 +142,9 @@ static void lk_facts_read(uint64_t dtb, struct lk_facts *f)
 				lv[depth].ftrace = dt_be32(v);
 			} else if (dt_streq(prop, "pmsg-size") && len == 4) {
 				lv[depth].pmsg = dt_be32(v);
+			} else if (depth == 1 && dt_streq(lv[1].name, "chosen") && dt_streq(prop, "bootargs")) {
+				bootargs = (const char *)v;
+				bootargs_len = len;
 			} else if (depth == 1 && dt_streq(lv[1].name, "chosen") && dt_streq(prop, "atag,videolfb") && len >= 20) {
 				f->fb_base = fdt_le64(v);
 				f->fb_lcm_found = fdt_le32(v + 8);
@@ -140,6 +177,22 @@ static void lk_facts_read(uint64_t dtb, struct lk_facts *f)
 		} else {
 			break;
 		}
+	}
+	if (!f->have_ramoops && bootargs) {
+		f->ramoops_base = bootarg_num(bootargs, bootargs_len, "ramoops.mem_address=");
+		f->ramoops_size = bootarg_num(bootargs, bootargs_len, "ramoops.mem_size=");
+		f->console_size = (uint32_t)bootarg_num(bootargs, bootargs_len, "ramoops.console_size=");
+		f->pmsg_size = (uint32_t)bootarg_num(bootargs, bootargs_len, "ramoops.pmsg_size=");
+		f->record_size = (uint32_t)bootarg_num(bootargs, bootargs_len, "ramoops.record_size=");
+		f->ftrace_size = (uint32_t)bootarg_num(bootargs, bootargs_len, "ramoops.ftrace_size=");
+		if (!f->record_size) {
+			f->record_size = 4096;          /* Linux's default (fs/pstore/ram.c), as the phone reports it */
+		}
+		if (!f->ftrace_size) {
+			f->ftrace_size = 4096;
+		}
+		f->have_ramoops = f->ramoops_base != 0 && f->ramoops_size != 0 &&
+		    (uint64_t)f->console_size + f->ftrace_size + f->pmsg_size <= f->ramoops_size;
 	}
 }
 

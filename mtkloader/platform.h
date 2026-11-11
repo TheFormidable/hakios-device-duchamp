@@ -67,52 +67,53 @@
  * LK's buffer. */
 #define PLAT_OVL_TOUCH          0
 #define PLAT_DISP_MUTEX_BASE    0x14001000ULL
-/* LK's framebuffer: chosen/atag,videolfb in LK's device tree gives its base and size at run time (mtkfdt.h). These are only
- * the fallback [phone]: no buffer is assumed unless one of the two is found. */
-#define PLAT_LK_FB_BASE         0x0ULL
-#define PLAT_LK_FB_SIZE         0x0ULL
-/* LK aligns the width to 32 pixels on the MT6768 (720 -> 736) [ref]: 1220 -> 1248 */
+/* LK's framebuffer: chosen/atag,videolfb in LK's device tree gives its base and size at run time (mtkfdt.h); on the phone
+ * 0xfcc2f000 + 0x33d0000, panel "n11a_42_02_0a_dsc_vdo_lcm_drv" at 60 fps -- kept as the fallback. */
+#define PLAT_LK_FB_BASE         0xfcc2f000ULL   /* [phone] atag,videolfb, = mblock-14-framebuffer */
+#define PLAT_LK_FB_SIZE         0x33d0000ULL
+/* LK aligns the width to 32 pixels on the MT6768 (720 -> 736) [ref]: 1220 -> 1248. Not seen yet: the buffer's 0x33d0000 is
+ * four frames of either pitch rounded up, so it does not tell. A wrong pitch only slants the loader's text. */
 #define PLAT_LK_FB_PITCH        (1248u * 4u)
 #define PLAT_FB_PITCH_MAX       (2048u * 4u)
 
-/* ---- DRAM [phone] ----
- * /memory in the shipped tree is LK's placeholder (0x40000000 + 1 GB); the phone has 8 or 12 GB from 0x40000000.
- * Most of the MT6897's reserved memory is placed by LK at boot (alloc-ranges up to 0x1_3000_0000), so the range below must
- * be checked against /proc/iomem and /sys/firmware/fdt's reserved-memory on the phone (tools/duchamp-probe.sh) before the
- * first run: XNU must get a range that nothing else uses.
- * The MT6768's 0xc0000000 does not carry over: on another MT6897 (Lenovo TB375FC, github.com/billyham07/UniXNU-tb375fc,
- * dts/tb375fc.dts) the first System RAM run without reserved holes starts at 0x130000000 -- exactly where those alloc-ranges
- * end -- and an XNU of the 16.5 route ran there in a 4 GiB window. Same here, 4 GiB (to 0x230000000, under the top of 8 GB). */
+/* ---- DRAM [phone: seen on Isaac's duchamp, 2311DRK48G, HyperOS OS3.0.6.0.WNLMIXM, 11 November] ----
+ * 8 GB: memory 0x40000000 + 0x200000000 (LK's tree), to 0x240000000. Below 0x130000000 LK's mblocks are everywhere (modem,
+ * TEE at 0xc0000000 + 0xe000000 -- right where the MT6768's XNU window was -- SCP, ADSP, GPUEB, the framebuffer...). The first
+ * long run of System RAM is 0x12fe70000-0x23dffffff in /proc/iomem, as on the TB375FC (another MT6897,
+ * github.com/billyham07/UniXNU-tb375fc). XNU gets 0x130000000 + 4 GiB less 2 MB; the 2 MB above it are the loader's (marker,
+ * panic log), and 0x23de00000 and up are GenieZone's, MKP's and cmdq's. */
+#define PLAT_DRAM_TOP           0x240000000ULL  /* 8 GB from 0x40000000 (a 12 GB duchamp: 0x340000000) */
 #define PLAT_XNU_PHYS_BASE      0x130000000ULL
-#define PLAT_XNU_MEM_SIZE       0x100000000ULL
+#define PLAT_XNU_MEM_SIZE       0x0ffe00000ULL
 
-/* Where LK starts the boot image's kernel (this program) [phone]. The MT6768's LK used 0x40080000 (base 0x40000000 + the
- * Image header's text_offset 0x80000). duchamp's BoardConfig has kernel base 0x3fff8000 with the default kernel offset
- * 0x8000, i.e. 0x40000000 -- but a header v4 boot image carries no addresses, so what LK does is its own: read it from
- * Android's /proc/iomem ("Kernel code") or LK's log in /proc/bootprof; link.ld and start.S's text_offset follow it. */
+/* Where LK starts a kernel [phone]: Android's Image is at 0x40000000 ("Kernel code" 0x40010000 in /proc/iomem, after the
+ * 64 KB head), i.e. kernel base 0x3fff8000 + offset 0x8000 of the BoardConfig and the Image's text_offset 0. Whether LK adds
+ * this program's text_offset 0x80000 is not known: start.S moves it to its link address either way. */
 #define PLAT_KERNEL_PA          0x40080000ULL
-/* Where Android's own Image is moved to and started [phone]: its header says text_offset 0, so it must sit on a 2 MB
- * boundary; LK's own choice for a plain boot is the address to use (the same "Kernel code" line of /proc/iomem). The copy goes
- * downwards over this program, which is safe (chain_stub runs from PLAT_CHAIN_STUB_PA). */
+/* Where Android's own Image is moved to and started [phone]: 0x40000000, where LK itself puts it (above). The copy goes
+ * downwards over this program, which is safe (chain_stub runs from PLAT_CHAIN_STUB_PA). Everything LK loaded must stay below
+ * its device tree, at 0x47c80000 on the phone (tools/chainboot.py checks it). */
 #define PLAT_ANDROID_PA         0x40000000ULL
-#define PLAT_CHAIN_STUB_PA      0x4a000000ULL   /* [ref] free DRAM for the copy stub, clear of the 50 MB Android Image */
-/* run state kept across the watchdog reset, and XNU's panic log [ref]: must be inside memory nothing else writes. Below
- * 0x130000000 LK places reserved memory at boot (see DRAM above): check these two against the probe before the first run. */
-#define PLAT_MARKER_PA          0x80000000ULL
-#define PLAT_PANIC_LOG_BASE     0x80100000ULL
+#define PLAT_CHAIN_STUB_PA      0x4a000000ULL   /* [phone] System RAM 0x48a00000-0x6fffdfff, below LK's ramdisk at 0x66f00000 */
+/* run state kept across the watchdog reset, and XNU's panic log [phone]: in the 2 MB right above XNU's window, System RAM that
+ * neither LK nor anything else claims. (The MT6768's 0x80000000 is mm_ccu_reserved on this phone.) */
+#define PLAT_MARKER_PA          0x22fe00000ULL
+#define PLAT_PANIC_LOG_BASE     0x22fe80000ULL  /* + PANIC_LOG_SIZE 0x80000 */
 
 /* ---- ramoops [phone] ----
- * LK adds the ramoops node at boot ("ramoops" in reserved-memory); mtkfdt.h finds it and works out the zones as Linux's
- * ramoops does (dump records first, then console, ftrace, pmsg at the end). These are only the fallback: 0 = no pstore. */
-#define PLAT_RAMOOPS_CONSOLE    0x0ULL
-#define PLAT_RAMOOPS_CONSOLE_SIZE 0x0u
-#define PLAT_RAMOOPS_PMSG       0x0ULL
-#define PLAT_RAMOOPS_PMSG_SIZE  0x0u
+ * duchamp's LK has no "ramoops" node: it reserves mblock-2-pstore ("mediatek,pstore") at 0x48090000 + 0xe0000 and passes
+ * ramoops.mem_address/mem_size/console_size/pmsg_size on the command line; record_size and ftrace_size are Linux's 4096
+ * (/sys/module/ramoops/parameters). mtkfdt.h reads the same from LK's bootargs at every boot; these are the zones that gives on
+ * the phone, kept as the fallback: console 0x4811f000 + 0x40000, pmsg 0x48160000 + 0x10000. */
+#define PLAT_RAMOOPS_CONSOLE    0x4811f000ULL
+#define PLAT_RAMOOPS_CONSOLE_SIZE 0x40000u
+#define PLAT_RAMOOPS_PMSG       0x48160000ULL
+#define PLAT_RAMOOPS_PMSG_SIZE  0x10000u
 
 /* ---- what is not used yet, for the next steps (docs/porting-mt6897.md) [dtb] ---- */
 #define PLAT_UFSHCI_BASE        0x112b0000ULL   /* ufshci@112b0000, "mediatek,mt8183-ufshci": the storage (UFS, not eMMC) */
 #define PLAT_UFSPHY_BASE        0x112a0000ULL
-#define PLAT_SPI2_BASE          0x11012000ULL   /* spi2: the touch controller (FocalTech FT3683G or Goodix, xiaomi_touch@0) */
+#define PLAT_SPI2_BASE          0x11012000ULL   /* spi2: the touch controller, xiaomi_touch@0: Goodix on this phone (dmesg: GTP) */
 #define PLAT_KEYPAD_BASE        0x1c00e000ULL   /* kp@1c00e000: volume up (hw key 0 -> KEY_VOLUMEUP); power, volume down: PMIC */
 #define PLAT_SPMI_BASE          0x1cc04000ULL   /* spmi@1cc04000 (PMIF): MT6363 + MT6368 PMICs. No PWRAP as on the MT6768 */
 #define PLAT_MALI_BASE          0x13000000ULL   /* mali@13000000, "arm,mali-valhall": Mali-G615 MC6, CSF; powered by GPUEB */
