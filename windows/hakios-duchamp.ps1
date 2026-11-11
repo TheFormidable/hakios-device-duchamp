@@ -25,9 +25,14 @@ function Fail($m) { Write-Host "hakios: ERROR: $m" -ForegroundColor Red; Read-Ho
 function Find-Adb {
 	$local = Join-Path $Root 'platform-tools\adb.exe'
 	if (Test-Path $local) { return $local }
+	# donde se suelen descomprimir las platform-tools a mano
+	foreach ($c in @('C:\platform-tools\adb.exe', (Join-Path $env:USERPROFILE 'platform-tools\adb.exe'),
+			(Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'))) {
+		if (Test-Path $c) { return $c }
+	}
 	$cmd = Get-Command adb.exe -ErrorAction SilentlyContinue
 	if ($cmd) { return $cmd.Source }
-	Warn 'No encuentro adb.exe (ni en el PATH ni en .\platform-tools).'
+	Warn 'No encuentro adb.exe (ni en el PATH ni en .\platform-tools ni en C:\platform-tools).'
 	$a = Read-Host '¿Descargo las platform-tools oficiales de Google (dl.google.com, ~13 MB) en esta carpeta? [S/n]'
 	if ($a -match '^[nN]') { Fail 'Instala las Android platform-tools y vuelve a ejecutar.' }
 	$zip = Join-Path $env:TEMP 'platform-tools-latest-windows.zip'
