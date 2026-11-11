@@ -1,0 +1,32 @@
+# Nothing of Apple's and nothing of the vendor's (LEGAL.md): firmware is pulled from your own phone, the iOS image is built from
+# your own IPSW, the font mtkloader/build.sh makes is never kept, and what tools/duchamp-probe.sh reads off the phone stays local.
+fw-*/
+backup/
+logs/
+mtkloader/font8x16.h
+mtkloader/*.o
+mtkloader/*.bin
+mtkloader/*.gz
+mtkloader/*.img
+build-payload.bin
+xnu-flashed-slot_a.img
+*.img
+*.ipsw
+*.dmg
+*.apfs
+*.dtb
+*.dtbo
+*.fd
+*.bin
+*.ko
+*.lz4
+*.png
+*.jpg
+*.jpeg
+*.heic
+*.mp4
+*.mov
+*.metallib
+*.dylib
+__pycache__/
+.DS_Store

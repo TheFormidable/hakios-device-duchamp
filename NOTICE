@@ -1,0 +1,17 @@
+hakios-device-duchamp -- the POCO X6 Pro 5G (duchamp, MediaTek Dimensity 8300 Ultra / MT6897) for HakiOS
+
+Licenses
+  kernel/        Apple Public Source License 2.0 (LICENSE.APSL): files written for, and built into, Apple's XNU
+                 (xnu-8796.121.2). None yet.
+  everything else  MIT (LICENSE).
+
+Derived from: hakios-mt6768 (github.com/oosexgang/hakios-mt6768, MIT) -- mtkloader/ and tools/ are its loader and scripts,
+carried over to this phone; the changes are said at the top of each file.
+
+Third-party code: none is copied into this repository. Register addresses were read from public sources, named where used:
+  - the MT6897 device tree and dtbo LineageOS ships for this phone (github.com/mt6897-devs/device_xiaomi_duchamp-kernel)
+    and its BoardConfig (github.com/mt6897-devs/device_xiaomi_duchamp) -- numbers read, nothing copied;
+  - MediaTek's Linux drivers (mediatek-drm's atag,videolfb; Linux's fs/pstore/ram.c zone layout) -- GPL-2.0; read, not copied.
+
+Not in this repository, by design (LEGAL.md): any file of iOS, any vendor firmware (pulled from the user's own phone by
+pull-firmware.sh), any image or device tree of the phone, any screenshot.

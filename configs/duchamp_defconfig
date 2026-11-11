@@ -1,0 +1,6 @@
+# HakiOS defconfig for the POCO X6 Pro 5G (duchamp, MediaTek MT6897): the common kernel's configuration, the MT6897's facts
+# (soc/configs/mt6897.config, which leaves every Qualcomm driver out) and this phone's own.
+# What tools/xnu-cycle.sh runs: make duchamp_defconfig && make kernel, then the kernel into boot_a through mtkloader.
+#include common_defconfig
+#include mt6897.config
+#include duchamp.config
