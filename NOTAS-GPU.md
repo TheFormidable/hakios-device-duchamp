@@ -4,6 +4,10 @@ Fecha: 12 de noviembre de 2026.
 
 ## Dónde está cada cosa
 
+El kernel (`xnu/`, `mac/hakios-kernel.sh`, `tools/embed-overlay.py`, `tests/`, `tools/panthor/` y
+`docs/panthor-user-client.md`) se movió a su propio repositorio: https://github.com/TheFormidable/hakios-xnu-duchamp.
+Las rutas de abajo son de ese repositorio cuando hablan del kernel.
+
 - `xnu/files/bsd/dev/redwood_mtkgpu.c`: el driver de la GPU dentro de XNU, tal como corrió en la corrida 25b. Es el último código probado.
 - `xnu/duchamp-overlay.py`: mete los archivos de `xnu/files/` en el árbol de XNU (rama mtk de hakios-xnu-kernel) y engancha cada driver.
 - `tools/embed-overlay.py`: vuelve a meter el overlay dentro de `mac/hakios-kernel.sh`. Córrelo después de cambiar cualquier cosa en `xnu/`.

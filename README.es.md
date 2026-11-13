@@ -32,8 +32,9 @@ Doble clic en `windows\hakios-duchamp.cmd` (con el teléfono conectado, depuraci
 
 ## En macOS (paso 3)
 
-- `mac/hakios-kernel.sh` compila el kernel XNU (árbol común, rama `mtk`) con las Command Line Tools y deja
-  `~/Desktop/hakios-kernel-duchamp.zip`. No toca el teléfono.
+- El kernel (los drivers de XNU de este teléfono y `mac/hakios-kernel.sh`, que lo compila) está en su propio repositorio,
+  [hakios-xnu-duchamp](https://github.com/TheFormidable/hakios-xnu-duchamp). El script deja `~/Desktop/hakios-kernel-duchamp.zip`
+  y no toca el teléfono.
 - `tools/mkimage.sh` (`XNU_KERNEL=` ese kernel) arma `xnu-flashed-slot_a.img`: el loader, el kernel y `hello` como disco en RAM.
 - `mac/hakios-paso3.sh`, en la carpeta de la imagen y `backup/boot_a.img`: 1 flashea, 2 arranca XNU una vez y trae el
   registro a `logs/`, 3 restaura, 4 solo trae el registro.

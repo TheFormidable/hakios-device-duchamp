@@ -54,4 +54,4 @@ XNU_SECS=120 XNU_ARGS="cpus=4" tools/xnu-cycle.sh    # with build-payload.bin: o
 
 ## Licenses
 
-`kernel/` (none yet) is APSL 2.0 (`LICENSE.APSL`); everything else is MIT (`LICENSE`). See `NOTICE` and `LEGAL.md`.
+The kernel side (XNU drivers, APSL 2.0) is in its own repository, [hakios-xnu-duchamp](https://github.com/TheFormidable/hakios-xnu-duchamp); everything here is MIT (`LICENSE`). See `NOTICE` and `LEGAL.md`.
