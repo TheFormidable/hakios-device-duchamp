@@ -31,13 +31,14 @@
 #define PLAT_TOPRGU_BASE        0x1c00a000ULL
 
 /* ---- GIC-600 (GICv3): interrupt-controller, "arm,gic-v3" [dtb] ----
- * GICD 0x0c400000 (0x40000), GICR 0x0c440000 (0x200000: eight redistributors, 0x40000 each -- GICv4.1 frames).
- * The MT6768's were 0x0c000000 and 0x0c040000 (0x20000 apart). */
+ * GICD 0x0c400000 (0x40000), GICR 0x0c440000 (0x200000). The redistributors are 0x20000 apart (RD + SGI frames, no
+ * VLPI/VSGI frames) like the MT6768's, seen on the phone (run 3, 11 November: cores 0x700, 0x600, 0x500 found at GICR +
+ * 0xe0000, 0xc0000, 0xa0000 by GICR_TYPER's affinity). The MT6768's were 0x0c000000 and 0x0c040000. */
 #define PLAT_GICD_BASE          0x0c400000ULL
 #define PLAT_GICD_SIZE          0x40000ULL
 #define PLAT_GICR_BASE          0x0c440000ULL
 #define PLAT_GICR_SIZE          0x200000ULL
-#define PLAT_GICR_STRIDE        0x40000ULL
+#define PLAT_GICR_STRIDE        0x20000ULL
 /* what the kernel's arm-io node covers: 0x0c000000 to 0x20000000, as on the MT6768 (every block below is inside) */
 #define PLAT_IO_BASE            0x0c000000ULL
 #define PLAT_IO_SIZE            0x14000000ULL

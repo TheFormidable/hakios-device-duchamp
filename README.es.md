@@ -28,6 +28,16 @@ trabajo.
 Doble clic en `windows\hakios-duchamp.cmd` (con el teléfono conectado, depuración USB y Magisk). Hace la copia de seguridad
 (`backup\`) y el sondeo (`logs\probe\`), sin bash ni Python, y deja `hakios-probe.zip` para enviarlo. Solo lee el teléfono.
 
+`windows\hakios-paso2.cmd`: flashea la imagen de la cadena (paso 2), pide un arranque y trae el registro; opción 3 restaura.
+
+## En macOS (paso 3)
+
+- `mac/hakios-kernel.sh` compila el kernel XNU (árbol común, rama `mtk`) con las Command Line Tools y deja
+  `~/Desktop/hakios-kernel-duchamp.zip`. No toca el teléfono.
+- `tools/mkimage.sh` (`XNU_KERNEL=` ese kernel) arma `xnu-flashed-slot_a.img`: el loader, el kernel y `hello` como disco en RAM.
+- `mac/hakios-paso3.sh`, en la carpeta de la imagen y `backup/boot_a.img`: 1 flashea, 2 arranca XNU una vez y trae el
+  registro a `logs/`, 3 restaura, 4 solo trae el registro.
+
 ## Uso (cuando estén comprobados los valores [phone] de platform.h)
 
 ```sh
@@ -36,7 +46,8 @@ tools/backup-boot.sh                     # copia de boot_a y demás: así se res
 tools/duchamp-probe.sh                   # logs/probe/summary.txt -> mtkloader/platform.h
 HAKIOS_ROOT=../.. mtkloader/build.sh     # mtkloader.bin
 python3 mtkloader/build_flashed.py       # xnu-flashed-slot_a.img (sin payload: solo la cadena, paso 2)
-XNU_SECS=120 XNU_ARGS="cpus=4" tools/xnu-cycle.sh    # con build-payload.bin: un arranque de XNU, el log en logs/
+XNU_KERNEL=... tools/mkimage.sh          # paso 3: loader + kernel + hello (md0) -> xnu-flashed-slot_a.img
+XNU_SECS=45 XNU_ARGS="cpus=1" tools/xnu-cycle.sh     # lo mismo, y además flashea, arranca XNU una vez y trae el log
 ```
 
 Solo se flashea `boot_a`. Nunca el slot b ni otra partición. Si el teléfono no vuelve: power + volumen abajo para fastboot y

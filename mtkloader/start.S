@@ -11,6 +11,9 @@
 .global psci_system_reset
 .global psci_cpu_on
 .global watcher_entry
+.global boot_core_entry
+.global psci_cpu_off
+.global park_jump
 .global mmu_on
 .global dcache_clean_range
 .global irq_wait
@@ -241,6 +244,68 @@ psci_cpu_on:
     ldr     x0, =0xc4000003
     smc     #0
     ret
+
+/* PSCI CPU_OFF: switches the calling core off; returns only on failure */
+psci_cpu_off:
+    ldr     x0, =0x84000002
+    smc     #0
+    ret
+
+/*
+ * The core XNU starts on (XNU_BOOT_CORE), started by PSCI CPU_ON before the jump: MMU and caches off. Its own stack,
+ * below the watcher's (the loader's is at _start - 0x8000, the watcher's at _start - 0x18000).
+ */
+boot_core_entry:
+    msr     daifset, #0xf
+    adrp    x9, mtk_vectors
+    add     x9, x9, :lo12:mtk_vectors
+    mrs     x10, CurrentEL
+    lsr     x10, x10, #2
+    cmp     x10, #2
+    b.ne    1f
+    msr     vbar_el2, x9
+    b       2f
+1:  msr     vbar_el1, x9
+2:  adr     x9, _start
+    sub     sp, x9, #0x28000
+    bl      boot_core_main
+3:  wfe
+    b       3b
+
+/*
+ * park_jump(entry_pa): core 0, kept for the kernel (mtkloader.c core0_park), into the kernel's reset vector the way
+ * PSCI CPU_ON would bring it there: EL1h, interrupts masked, MMU and caches off, no timer of LK's or ours asking, no
+ * stale instruction or translation, x0 = 0 (the context id). The data side as for the jump into XNU on this same core
+ * (jump_to_kernel), which runs 1-9 started the whole kernel from.
+ */
+park_jump:
+    msr     daifset, #0xf
+    mov     x16, x0
+    msr     cntv_ctl_el0, xzr
+    msr     cntp_ctl_el0, xzr
+    mrs     x2, CurrentEL
+    lsr     x2, x2, #2
+    cmp     x2, #2
+    b.ne    1f
+    mov     x2, #(1 << 31)      /* HCR_EL2.RW: EL1 is AArch64 */
+    msr     hcr_el2, x2
+    mov     x2, #0x3c5          /* EL1h, DAIF masked */
+    msr     spsr_el2, x2
+    msr     elr_el2, x16
+    mov     x0, xzr
+    eret
+1:  mrs     x2, sctlr_el1
+    bic     x2, x2, #0x1
+    bic     x2, x2, #0x4
+    bic     x2, x2, #0x1000
+    msr     sctlr_el1, x2
+    isb
+    ic      iallu
+    tlbi    vmalle1
+    dsb     sy
+    isb
+    mov     x0, xzr
+    br      x16
 
 /* Second core, started by PSCI CPU_ON while XNU runs on the first: MMU and caches off. */
 watcher_entry:

@@ -13,6 +13,14 @@ Image, then the optional payload (mtkloader's "XNUP"), 16-aligned. The program's
 (0x28), the payload's offset in res3 (0x30) and a covering image_size (0x10). The program moves Android's Image to a 2 MB
 boundary and starts it (mtkloader.c, chain_android). Everything else of the image is copied as it is.
 
+AVB: a boot_a read off the phone is the whole 64 MB partition, ending in an AVB footer ("AVBf", its last 64 bytes) that points
+at the partition's own vbmeta, written right after the original image (on Isaac's phone at 0xfcd000). The new image is larger
+than the old one, so flashing it alone would overwrite that vbmeta with kernel bytes and leave the old footer pointing at
+garbage: libavb calls that invalid metadata, which an unlocked bootloader does not forgive. So, as magiskboot does, the output
+is the whole partition again: the new image, the original vbmeta blob (unchanged: it stays validly signed, only its hash of
+the image no longer matches, which is the verification error an unlocked, orange-state phone accepts) right after it, and a
+new footer at the end that says where.
+
 What LK does with an image larger than Android's own is not known yet: the check below refuses one whose uncompressed blob,
 from the load address, would reach LK's device tree (BoardConfig: kernel base 0x3fff8000 + tags offset 0x07c88000).
 """
@@ -85,6 +93,7 @@ def main():
     if hver not in (3, 4):
         raise SystemExit(f'{src}: header v{hver}; this is the header v3/v4 tool (the X6826B\'s v2 one is hakios-mt6768\'s)')
     page = 4096
+    footer = d[-64:] if d[-64:-60] == b'AVBf' else None
     sig_size = struct.unpack_from('<I', d, 1580)[0] if hver == 4 else 0
 
     def pages(n):
@@ -121,13 +130,28 @@ def main():
     hdr = bytearray(d[:page])
     struct.pack_into('<I', hdr, 8, len(new_kernel))
     img = bytes(hdr) + pad(new_kernel, page) + pad(ramdisk, page) + pad(signature, page)
+    avb = 'no AVB footer in the source (flash it only if the phone took such images before)'
+    if footer:
+        major, minor, orig_size, vb_off, vb_size = struct.unpack('>IIQQQ', footer[4:36])
+        vbmeta = d[vb_off:vb_off + vb_size]
+        assert vbmeta[:4] == b'AVB0', 'the AVB footer does not point at a vbmeta blob'
+        part_size = len(d)
+        image_size = len(img)
+        img = pad(img, page) + vbmeta
+        if len(img) > part_size - 64:
+            raise SystemExit(f'{out}: no room for the vbmeta and the footer in {part_size} bytes')
+        new_footer = struct.pack('>4sIIQQQ', b'AVBf', major, minor, image_size, (image_size + page - 1) // page * page,
+                                 vb_size) + b'\0' * 28
+        img = img + b'\0' * (part_size - 64 - len(img)) + new_footer
+        avb = (f'AVB: vbmeta moved {vb_off:#x} -> {(image_size + page - 1) // page * page:#x}, footer rewritten, '
+               f'{part_size} bytes (the whole partition)')
     # 64 MB: fastboot refuses a larger one, and a script that sends its output nowhere would carry on as if it had been flashed
     if len(img) > BOOT_PARTITION:
         raise SystemExit(f'{out}: {len(img)} bytes, more than the {BOOT_PARTITION} of the boot partition '
                          f'({len(img) - BOOT_PARTITION} too many): the payload has to shrink')
     open(out, 'wb').write(img)
     print(f'{out}: {len(img)} bytes, header v{hver} (program {len(prog)}, Image {len(image)}, payload {len(payload)}, '
-          f'kernel {how} {len(new_kernel)}, {total:#x} bytes once LK has unpacked it)')
+          f'kernel {how} {len(new_kernel)}, {total:#x} bytes once LK has unpacked it)\n{avb}')
 
 
 if __name__ == '__main__':

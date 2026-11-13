@@ -22,5 +22,7 @@ the TD4160 are not this phone's.
 
 ## Working on the phone: safety
 
-Flash only `boot_a`. Always pass the serial. Keep `backup/` (tools/backup-boot.sh) before the first flash. Runs short and one
+Flash only `boot_a`, and `xnusys` once it exists. The one other write, approved by the owner on 11 November: LUN 2's GPT, once,
+to carve `xnusys` (8 GiB) off the end of `userdata` (tools/gpt-xnusys.py makes it from what windows/hakios-xnusys.ps1 reads;
+the same script writes it after the owner types BORRAR, and wipes `userdata`). Always pass the serial. Keep `backup/` (tools/backup-boot.sh) before the first flash. Runs short and one
 at a time; no voltage or clock changes; the UFS path, when it comes, read only by construction.

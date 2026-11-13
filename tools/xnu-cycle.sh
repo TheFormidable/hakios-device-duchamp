@@ -6,22 +6,10 @@ set -e
 S=${HAKIOS_SERIAL:?set HAKIOS_SERIAL to the serial of your phone, as adb devices shows it}
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT=${XNU_LOG_OUT:-$ROOT/logs/xnu-last.log}
-# test settings: XNU picked by default, watchdog and watcher on, XNU comes back by itself
-# XNU_SECS: how long the kernel runs before it hands the log back (the watcher waits a bit longer)
 SECS=${XNU_SECS:-45}
-# XNU_ARGS: the kernel's own command line (cores and so on); the clock comes from this machine
-XNU_ARGS=${XNU_ARGS:-cpus=1}
-# the device tree offers the kernel exactly this many cores; "cpus=" in XNU_ARGS should match
-CORES=${XNU_CORES:-$(expr "$XNU_ARGS" : '.*cpus=\([0-9]*\)' || echo 1)}
-[ -n "$CORES" ] || CORES=1
-WATCH=${XNU_WATCH:-$((SECS + 240))}
-# No MENU_DEFAULT_XNU: the image boots Android, and XNU is asked for once (tools/boot-xnu.sh), so
-# a kernel that hangs costs a power cycle and not a rescue through BROM.
-TEST_FLAGS=(-DXNU_WDT_SECONDS=0 -DXNU_CORES=$CORES -DXNU_WATCH_SECONDS=$WATCH
-	"-DXNU_RETURN_AFTER=\"$SECS\"" "-DXNU_EXTRA_ARGS=\"$XNU_ARGS epoch=$(date +%s)\"")
-"$ROOT/mtkloader/build.sh" "${TEST_FLAGS[@]}" "$@" >/dev/null
+# the loader, the payload and the image: tools/mkimage.sh (XNU_KERNEL, XNU_RAMDISK, XNU_ARGS, XNU_WATCH are its)
 [ -f "$ROOT/backup/boot_a.img" ] || { echo "no backup/boot_a.img: tools/backup-boot.sh first"; exit 1; }
-python3 "$ROOT/mtkloader/build_flashed.py" >/dev/null
+XNU_SECS=$SECS "$ROOT/tools/mkimage.sh" "$@"
 [ "$(adb -s $S get-state 2>/dev/null)" = device ] && adb -s $S reboot bootloader
 for i in $(seq 1 120); do fastboot devices | grep -q $S && break; sleep 1; done
 # (fastboot -s waits for ever for a phone that is not there: a run would hang for hours)

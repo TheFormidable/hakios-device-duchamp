@@ -94,7 +94,7 @@ dt_words(const char *what, const uint8_t *value, uint32_t len)
 	out("\n");
 }
 
-static void
+static void __attribute__((unused))   /* (only with -DCONNSYS_REPORT=1) */
 connsys_dt_report(uint64_t dtb)
 {
 	const uint8_t *fdt = (const uint8_t *)(uintptr_t)dtb;
