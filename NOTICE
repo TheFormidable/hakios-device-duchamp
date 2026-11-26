@@ -15,3 +15,8 @@ Third-party code: none is copied into this repository. Register addresses were r
 
 Not in this repository, by design (LEGAL.md): any file of iOS, any vendor firmware (pulled from the user's own phone by
 pull-firmware.sh), any image or device tree of the phone, any screenshot.
+
+Imported from iPocOS (github.com/SuperProgramer64/iPocOS, commit 7f0308f, by SuperProgramer64), unchanged:
+  userland/ipocos/**  MIT (each file says SPDX-License-Identifier: MIT); copyright stays with their authors.
+Not imported: files with no license notice (the iPocOS loader, dual-boot selector, installer ipocos.py, tests),
+the Panthor user-space client (panthor-drm/, bench/mac_bench.c), and anything of Apple's or the vendor's (LEGAL.md).
